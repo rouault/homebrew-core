@@ -1,19 +1,10 @@
 class Protobuf < Formula
   desc "Protocol buffers (Google's data interchange format)"
-  homepage "https://github.com/protocolbuffers/protobuf/"
+  homepage "https://protobuf.dev/"
+  url "https://github.com/protocolbuffers/protobuf/releases/download/v22.0/protobuf-22.0.tar.gz"
+  sha256 "e340f39fad1e35d9237540bcd6a2592ccac353e5d21d0f0521f6ab77370e0142"
   license "BSD-3-Clause"
   head "https://github.com/protocolbuffers/protobuf.git", branch: "main"
-
-  stable do
-    url "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-all-21.12.tar.gz"
-    sha256 "2c6a36c7b5a55accae063667ef3c55f2642e67476d96d355ff0acb13dbb47f09"
-
-    # Fix build with Python 3.11. Remove in the next release.
-    patch do
-      url "https://github.com/protocolbuffers/protobuf/commit/da973aff2adab60a9e516d3202c111dbdde1a50f.patch?full_index=1"
-      sha256 "911925e427a396fa5e54354db8324c0178f5c602b3f819f7d471bb569cc34f53"
-    end
-  end
 
   livecheck do
     url :stable
@@ -34,8 +25,17 @@ class Protobuf < Formula
   depends_on "cmake" => :build
   depends_on "python@3.10" => [:build, :test]
   depends_on "python@3.11" => [:build, :test]
+  depends_on "abseil"
 
   uses_from_macos "zlib"
+
+  # Fix unexported symbols on arm64.
+  patch do
+    on_arm do
+      url "https://github.com/protocolbuffers/protobuf/commit/2ce56399e30db62e45869c6fd2d2bbacbb81a7ed.patch?full_index=1"
+      sha256 "8cd14300c654ffed14b2f0d70c213fa39ae24dee7c6157f50263dd92808d8f77"
+    end
+  end
 
   def pythons
     deps.map(&:to_formula)
@@ -44,14 +44,17 @@ class Protobuf < Formula
   end
 
   def install
+    # Keep `CMAKE_CXX_STANDARD` in sync with the same variable in `abseil.rb`.
     cmake_args = %w[
       -Dprotobuf_BUILD_LIBPROTOC=ON
       -Dprotobuf_BUILD_SHARED_LIBS=ON
       -Dprotobuf_INSTALL_EXAMPLES=ON
       -Dprotobuf_BUILD_TESTS=OFF
-    ] + std_cmake_args
+      -Dprotobuf_ABSL_PROVIDER=package
+      -DCMAKE_CXX_STANDARD=17
+    ]
 
-    system "cmake", "-S", ".", "-B", "build", *cmake_args
+    system "cmake", "-S", ".", "-B", "build", *cmake_args, *std_cmake_args
     system "cmake", "--build", "build"
     system "cmake", "--install", "build"
 
@@ -63,6 +66,9 @@ class Protobuf < Formula
     ENV["PROTOC"] = bin/"protoc"
 
     cd "python" do
+      # Keep C++ standard in sync with `abseil.rb`.
+      inreplace "setup.py", "extra_compile_args.append('-std=c++14')",
+                            "extra_compile_args.append('-std=c++17')"
       pythons.each do |python|
         system python, *Language::Python.setup_install_args(prefix, python), "--cpp_implementation"
       end
