@@ -1,17 +1,11 @@
 class Juju < Formula
   desc "DevOps management tool"
   homepage "https://juju.is/"
-  url "https://github.com/juju/juju.git",
-      tag:      "juju-3.1.1",
-      revision: "0a2659b7b4f74b0f914e2d150a34724998ddd6c1"
+  url "https://launchpad.net/juju/3.1/3.1.0/+download/juju-core_3.1.0.tar.gz"
+  sha256 "3fe59db795dd49dd79a3964bb5ed9ef902a230eb207b44f5766cdbfc339f8ea3"
   license "AGPL-3.0-only"
-  version_scheme 1
+  version_scheme 2
   head "https://github.com/juju/juju.git", branch: "develop"
-
-  livecheck do
-    url :stable
-    regex(/^juju[._-]v?(\d+(?:\.\d+)+)$/i)
-  end
 
   bottle do
     sha256 cellar: :any_skip_relocation, arm64_ventura:  "ef1585fe43cc66f1933384925566ca7daf83ef6dcbb8254a3dbbb656e44a3e92"
@@ -28,12 +22,13 @@ class Juju < Formula
   def install
     ld_flags = %W[
       -s -w
-      -X version.GitCommit=#{Utils.git_head}
-      -X version.GitTreeState=clean
     ]
-    system "go", "build", *std_go_args(ldflags: ld_flags), "./cmd/juju"
-    system "go", "build", *std_go_args(output: bin/"juju-metadata", ldflags: ld_flags), "./cmd/plugins/juju-metadata"
-    bash_completion.install "etc/bash_completion.d/juju"
+
+    cd "src/github.com/juju/juju" do
+      system "go", "build", *std_go_args(ldflags: ld_flags), "./cmd/juju"
+      system "go", "build", *std_go_args(output: bin/"juju-metadata", ldflags: ld_flags), "./cmd/plugins/juju-metadata"
+      bash_completion.install "etc/bash_completion.d/juju"
+    end
   end
 
   test do
