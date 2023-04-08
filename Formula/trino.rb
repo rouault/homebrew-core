@@ -55,10 +55,11 @@ class Trino < Formula
       inreplace libexec/"etc/jvm.config" do |s|
         %w[
           -agentpath:/usr/lib/trino/bin/libjvmkill.so
-          -XX:+UseAESCTRIntrinsics
         ].each do |line|
           s.gsub!(/^(#{Regexp.quote(line)})$/, "# \\1")
         end
+        s.gsub!(/^(-D.*)$/, "# \\1")
+        s.gsub!(/^(-XX:.*)$/, "# \\1")
       end
     end
 
