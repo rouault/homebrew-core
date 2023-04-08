@@ -92,10 +92,16 @@ class Trino < Formula
     port = free_port
     cp libexec/"etc/config.properties", testpath/"config.properties"
     inreplace testpath/"config.properties", "8080", port.to_s
-    server = fork do
-      exec bin/"trino-server", "run", "--verbose",
-                                      "--data-dir", testpath,
-                                      "--config", testpath/"config.properties"
+    args = [
+      "--verbose",
+      "--data-dir", testpath,
+      "--config", testpath/"config.properties"
+    ]
+    server = if Hardware::CPU.intel?
+      fork { exec bin/"trino-server", "run", *args }
+    else
+      # Try invoking `trino-server` directly on ARM.
+      system bin/"trino-server", "run", *args
     end
     sleep 30
 
@@ -103,7 +109,9 @@ class Trino < Formula
     output = shell_output(bin/"trino --debug --server localhost:#{port} --execute '#{query}'")
     assert_match "\"active\"", output
   ensure
-    Process.kill("TERM", server)
-    Process.wait server
+    if Hardware::CPU.intel?
+      Process.kill("TERM", server)
+      Process.wait server
+    end
   end
 end
