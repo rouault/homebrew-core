@@ -48,9 +48,18 @@ class Trino < Formula
       ENV.prepend_path "PATH", Formula["gnu-tar"].opt_libexec/"gnubin"
       system "tar", "-xzf", "trino-#{r.version}.tar.gz"
       (libexec/"etc").install Dir["trino-#{r.version}/core/docker/default/etc/*"]
-      inreplace libexec/"etc/node.properties", "docker", tap.user.downcase
-      inreplace libexec/"etc/node.properties", "/data/trino", var/"trino/data"
-      inreplace libexec/"etc/jvm.config", %r{^-agentpath:/usr/lib/trino/bin/libjvmkill.so$\n}, ""
+      inreplace libexec/"etc/node.properties" do |s|
+        s.gsub! "node.environment=docker", "node.environment=#{tap.user.downcase}"
+        s.gsub! "node.data-dir=/data/trino", "node.data-dir=#{var/"trino/data"}"
+      end
+      inreplace libexec/"etc/jvm.config" do |s|
+        %w[
+          -agentpath:/usr/lib/trino/bin/libjvmkill.so
+          -XX:+UseAESCTRIntrinsics
+        ].each do |line|
+          s.gsub!(/^(#{Regexp.quote(line)})$/, "# \\1")
+        end
+      end
     end
 
     rewrite_shebang detected_python_shebang, libexec/"bin/launcher.py"
