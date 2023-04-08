@@ -31,11 +31,21 @@ class Sapling < Formula
   depends_on "openssl@1.1"
   depends_on "python@3.11"
 
+  # `setuptools` 66.0.0+ only supports PEP 440 conforming version strings.
+  # Modify the version string to make `setuptools` happy.
+  # TODO: Upstream builds their own Homebrew bottles. If upstream maintainers
+  # choose to handle the version string differently, follow them:
+  #   https://github.com/facebook/sapling/tree/main/eden/scm/packaging/mac
+  def modified_version
+    segments = version.to_s.split("-")
+    "#{segments.take(2).join("-")}+#{segments.last}"
+  end
+
   def install
     python3 = "python3.11"
 
     ENV["OPENSSL_DIR"] = Formula["openssl@1.1"].opt_prefix
-    ENV["SAPLING_VERSION"] = version.to_s
+    ENV["SAPLING_VERSION"] = modified_version
 
     # Don't allow the build to break our shim configuration.
     inreplace "eden/scm/distutils_rust/__init__.py", '"HOMEBREW_CCCFG"', '"NONEXISTENT"'
@@ -43,7 +53,7 @@ class Sapling < Formula
   end
 
   test do
-    assert_equal("Sapling #{version}", shell_output("#{bin}/sl --version").chomp)
+    assert_equal("Sapling #{modified_version}", shell_output("#{bin}/sl --version").chomp)
     system "#{bin}/sl", "config", "--user", "ui.username", "Sapling <sapling@sapling-scm.com>"
     system "#{bin}/sl", "init", "--git", "foobarbaz"
     cd "foobarbaz" do
