@@ -33,9 +33,8 @@ class Sapling < Formula
 
   # `setuptools` 66.0.0+ only supports PEP 440 conforming version strings.
   # Modify the version string to make `setuptools` happy.
-  # TODO: Upstream builds their own Homebrew bottles. If upstream maintainers
-  # choose to handle the version string differently, follow them:
-  #   https://github.com/facebook/sapling/tree/main/eden/scm/packaging/mac
+  # TODO: Check if upstream advise handling the version string differently:
+  #   https://github.com/facebook/sapling/issues/598
   def modified_version
     segments = version.to_s.split("-")
     "#{segments.take(2).join("-")}+#{segments.last}"
